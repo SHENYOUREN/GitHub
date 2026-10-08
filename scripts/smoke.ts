@@ -2,16 +2,19 @@ import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { createApp } from '../src/app.js';
 import { MemoryAuditSink } from '../src/audit.js';
+import { TimelineStore } from '../src/timeline.js';
 import { HIERARCHY_METADATA_KEY, type TaskEnvelope } from '../src/types.js';
 import { ProofWorkerAdapter } from '../src/workers/proof-worker.js';
 
 const token = 'smoke-controller-token';
 const audit = new MemoryAuditSink();
+const timeline = new TimelineStore();
 const app = createApp({
   baseUrl: 'http://127.0.0.1:0',
   controllerToken: token,
   worker: new ProofWorkerAdapter(),
   audit,
+  timeline,
 });
 const server = app.listen(0, '127.0.0.1');
 await once(server, 'listening');
@@ -31,6 +34,36 @@ try {
   );
   if (!agentCard.securitySchemes?.controllerBearer) {
     throw new Error('Agent Card does not advertise controller Bearer authentication.');
+  }
+
+  const catalog = await fetch(`${baseUrl}/ui-api/catalog`).then((response) => response.json());
+  if (!Array.isArray(catalog.providers) || catalog.providers.length < 2) {
+    throw new Error('Model catalog did not expose the configured providers.');
+  }
+  const draftResponse = await fetch(`${baseUrl}/ui-api/drafts`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      providerId: 'deepseek-harness',
+      objective: 'Draft only. Do not call an external model.',
+      modelId: 'unselected',
+      tier: 'unselected',
+      precision: '严谨',
+      reasoningEffort: '高',
+      role: 'worker',
+      permission: 'read-only',
+    }),
+  });
+  const draft = await draftResponse.json();
+  if (!draftResponse.ok || draft.requiresExplicitAuthorization !== true) {
+    throw new Error('Draft did not require explicit authorization.');
+  }
+  if (draft.externalModelCalled !== false) {
+    throw new Error('Creating a draft must not call an external model.');
+  }
+  const timelineBody = await fetch(`${baseUrl}/ui-api/timeline`).then((response) => response.json());
+  if (!timelineBody.events?.some((event: { type?: string }) => event.type === 'worker.authorization.waiting')) {
+    throw new Error('Draft did not produce a visible worker authorization message.');
   }
 
   const denied = await fetch(`${baseUrl}/a2a`, {
@@ -107,6 +140,10 @@ try {
   console.log(JSON.stringify({
     health,
     agentCardSecurity: Object.keys(agentCard.securitySchemes),
+    providerCount: catalog.providers.length,
+    draftRequiresAuthorization: draft.requiresExplicitAuthorization,
+    draftExternalModelCalled: draft.externalModelCalled,
+    workerConversationVisible: true,
     unauthorizedStatus: denied.status,
     taskId,
     finalState: task.status.state,

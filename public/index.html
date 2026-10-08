@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>多模型任务室</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark"><img src="/assets/icons/workflow.svg" alt="" /></span>
+        <div><h1>多模型任务室</h1><p>主控端口控制执行端</p></div>
+      </div>
+      <div class="top-actions">
+        <div class="service-state" id="service-state"><span class="state-dot"></span><span>连接中</span></div>
+        <button class="secondary-button" id="rework" type="button"><img src="/assets/icons/rotate-ccw.svg" alt="" />检查并返工</button>
+      </div>
+    </header>
+
+    <main class="task-room">
+      <section class="agent-deck" aria-label="代理配置">
+        <article class="agent-panel controller-panel">
+          <div class="agent-heading"><div><span class="role-dot controller"></span><strong>主控 Agent</strong></div><span class="agent-state">在线</span></div>
+          <p class="hierarchy">主控 · 上级：用户</p>
+          <p class="selection-line">当前选择：<strong id="controller-summary">Codex 主控</strong></p>
+          <div class="agent-fields">
+            <label>Provider<select id="controller-provider"><option>Codex</option></select></label>
+            <label>Model<select id="controller-model"><option>当前会话模型</option></select></label>
+          </div>
+          <fieldset class="effort-field"><legend>推理</legend><div class="effort-options static"><span class="active">由当前会话控制</span></div></fieldset>
+        </article>
+
+        <article class="agent-panel worker-panel">
+          <div class="agent-heading"><div><span class="role-dot worker"></span><strong>执行 Agent</strong></div><span class="agent-state" id="worker-state">待命</span></div>
+          <p class="hierarchy">执行 · 上级：主控 Agent</p>
+          <p class="selection-line">当前选择：<strong id="worker-summary">尚未选择</strong></p>
+          <div class="agent-fields">
+            <label>Provider<select id="provider" name="providerId"></select></label>
+            <label>Model<select id="model" name="modelId"></select></label>
+          </div>
+          <fieldset class="effort-field"><legend>推理</legend><div class="effort-options" id="effort-options"></div></fieldset>
+        </article>
+      </section>
+
+      <section class="workspace-strip">
+        <img src="/assets/icons/folder-check.svg" alt="" />
+        <div><span>工作区校验</span><strong>D:\GPT工作室</strong></div>
+        <span class="workspace-status">本机工作区 · 等待执行授权</span>
+      </section>
+
+      <section class="conversation-shell">
+        <div class="conversation-toolbar">
+          <div><p class="eyebrow">可审计对话</p><h2>主控端 ↔ 执行端</h2></div>
+          <button class="icon-button" id="refresh" type="button" title="刷新对话"><img src="/assets/icons/refresh-cw.svg" alt="刷新" /></button>
+        </div>
+        <div class="conversation" id="conversation" aria-live="polite"></div>
+      </section>
+
+      <form class="composer" id="task-form">
+        <textarea id="objective" name="objective" rows="3" placeholder="由主控端向执行端下发任务。创建后先进入待授权队列，不会直接调用模型。" required></textarea>
+        <div class="composer-bottom">
+          <div class="compact-fields">
+            <label>角色<select id="role"><option value="worker">执行</option><option value="reviewer">审查</option><option value="researcher">研究</option></select></label>
+            <label>权限<select id="permission"><option value="read-only">只读</option><option value="workspace-write">工作区写入</option></select></label>
+          </div>
+          <button class="primary-button" type="submit"><img src="/assets/icons/send.svg" alt="" />主控下发</button>
+        </div>
+        <p class="provider-note" id="provider-note"></p>
+      </form>
+    </main>
+
+    <dialog id="detail-dialog">
+      <div class="dialog-heading"><div><p class="eyebrow">消息轨迹</p><h2 id="detail-title">执行详情</h2></div><button class="icon-button" type="button" id="close-detail" title="关闭"><img src="/assets/icons/x.svg" alt="关闭" /></button></div>
+      <div id="detail-content"></div>
+    </dialog>
+    <dialog id="confirmation-dialog">
+      <div class="dialog-heading"><img src="/assets/icons/shield-check.svg" alt="" /><h2>已加入主控队列</h2></div>
+      <p>执行端保持待命，需再次明确授权才可运行。</p>
+      <p class="dialog-state">尚未调用任何外部模型</p>
+      <form method="dialog" class="dialog-actions"><button class="secondary-button" value="close">关闭</button></form>
+    </dialog>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

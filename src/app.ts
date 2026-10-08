@@ -1,4 +1,5 @@
 import express, { type RequestHandler } from 'express';
+import { resolve } from 'node:path';
 import {
   A2A_PROTOCOL_VERSION,
   AGENT_CARD_PATH,
@@ -14,6 +15,8 @@ import {
   UserBuilder,
 } from '@a2a-js/sdk/server/express';
 import { HierarchicalExecutor } from './executor.js';
+import { modelProviders } from './catalog.js';
+import type { TimelineStore } from './timeline.js';
 import type { AuditSink, WorkerAdapter } from './types.js';
 
 export interface AppOptions {
@@ -21,6 +24,7 @@ export interface AppOptions {
   controllerToken: string;
   worker: WorkerAdapter;
   audit: AuditSink;
+  timeline?: TimelineStore;
 }
 
 function bearerGuard(expectedToken: string): RequestHandler {
@@ -107,6 +111,10 @@ export function createApp(options: AppOptions) {
   );
   const app = express();
 
+  app.disable('x-powered-by');
+  app.use('/assets/icons', express.static(resolve('node_modules', 'lucide-static', 'icons')));
+  app.use(express.static(resolve('public')));
+
   app.get('/health', (_request, response) => {
     response.json({
       status: 'ok',
@@ -129,6 +137,66 @@ export function createApp(options: AppOptions) {
           capabilities: options.worker.capabilities,
         },
       ],
+    });
+  });
+  app.get('/ui-api/catalog', (_request, response) => {
+    response.json({ providers: modelProviders });
+  });
+  app.get('/ui-api/timeline', (_request, response) => {
+    response.json({ events: options.timeline?.list() ?? [] });
+  });
+  app.post('/ui-api/drafts', express.json({ limit: '64kb' }), (request, response) => {
+    const provider = modelProviders.find((item) => item.id === request.body?.providerId);
+    const objective = typeof request.body?.objective === 'string'
+      ? request.body.objective.trim()
+      : '';
+    if (!provider || !objective) {
+      response.status(400).json({ error: 'invalid_draft' });
+      return;
+    }
+
+    const event = options.timeline?.add({
+      type: 'task.draft.created',
+      actor: 'codex-controller',
+      title: '主控端下发任务',
+      detail: objective,
+      state: 'waiting',
+      metadata: {
+        channel: 'controller',
+        providerId: provider.id,
+        providerName: provider.name,
+        modelId: request.body?.modelId ?? null,
+        tier: request.body?.tier ?? null,
+        precision: request.body?.precision ?? null,
+        reasoningEffort: request.body?.reasoningEffort ?? null,
+        role: request.body?.role ?? 'worker',
+        permission: request.body?.permission ?? 'read-only',
+        reasoningSummary: '主控端已整理任务范围，等待用户授权执行端开始工作。',
+        toolSummary: '无工具调用',
+      },
+    });
+    options.timeline?.add({
+      type: 'worker.authorization.waiting',
+      actor: request.body?.role ?? 'worker',
+      title: '执行端等待授权',
+      detail: `${provider.name} 尚未开始执行此任务。`,
+      state: 'waiting',
+      metadata: {
+        channel: request.body?.role ?? 'worker',
+        providerId: provider.id,
+        providerName: provider.name,
+        modelId: request.body?.modelId ?? null,
+        tier: request.body?.tier ?? null,
+        reasoningEffort: request.body?.reasoningEffort ?? null,
+        permission: request.body?.permission ?? 'read-only',
+        reasoningSummary: '未运行：执行端尚未获得用户授权。',
+        toolSummary: '无工具调用，未读取文件，未访问网络。',
+      },
+    });
+    response.status(201).json({
+      draft: event,
+      requiresExplicitAuthorization: true,
+      externalModelCalled: false,
     });
   });
   app.get('/docs', (_request, response) => {

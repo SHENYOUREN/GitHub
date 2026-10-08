@@ -71,3 +71,32 @@ export interface AuditEntry {
 export interface AuditSink {
   write(entry: AuditEntry): Promise<void>;
 }
+
+export type ProviderStatus = 'ready' | 'bridge-only' | 'not-connected';
+
+export interface ModelOption {
+  id: string;
+  name: string;
+  tiers: string[];
+  precisionModes: string[];
+  reasoningEfforts: string[];
+  capabilities: string[];
+}
+
+export interface ModelProvider {
+  id: string;
+  name: string;
+  status: ProviderStatus;
+  models: ModelOption[];
+}
+
+export interface TimelineEvent {
+  id: string;
+  timestamp: string;
+  type: string;
+  actor: string;
+  title: string;
+  detail?: string;
+  state: 'info' | 'waiting' | 'success' | 'error';
+  metadata?: Record<string, unknown>;
+}
