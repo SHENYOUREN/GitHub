@@ -53,6 +53,29 @@ A2A 分层调度中转站
 - [`docs/architecture.zh-CN.md`](docs/architecture.zh-CN.md)：完整架构与实施路线。
 - [`protocol/task-envelope.schema.json`](protocol/task-envelope.schema.json)：分层任务元数据草案。
 
+## 本地运行
+
+需要 Node.js 22.19 或更高版本。
+
+```powershell
+npm install
+$env:CONTROLLER_TOKEN = [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+npm run build
+npm test
+npm run smoke
+npm start
+```
+
+服务默认只监听 `http://127.0.0.1:4310`。主要入口：
+
+- `GET /health`：无需凭据的存活检查。
+- `GET /.well-known/agent-card.json`：A2A Agent Card。
+- `POST /a2a`：需要主控 Bearer Token 的 A2A JSON-RPC 接口。
+- `GET /api/agents`：需要主控 Bearer Token 的角色与执行端清单。
+
+当前执行端为 `proof-worker`，用于验证协议和权限闭环。DeepSeek Harness ACP
+适配器是下一阶段实现；在它完成前，不应把本地证明执行器描述为真实模型执行。
+
 ## 实施路线
 
 1. 用现有 DeepSeek 执行桥验证 Codex 派工、DeepSeek 执行、Codex 验收闭环。

@@ -22,6 +22,7 @@
     },
     "taskId": {
       "type": "string",
+      "description": "Controller-side correlation ID. The receiving A2A server generates the protocol task ID.",
       "minLength": 1,
       "maxLength": 128
     },

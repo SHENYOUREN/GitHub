@@ -77,8 +77,9 @@ submitted -> accepted -> working -> input_required -> working
 io.github.shenyouren.hierarchy
 ```
 
-元数据至少包含任务 ID、父任务 ID、发起者、执行者、角色、允许动作、权限范围、
-验收条件和时间信息。结构草案见 `protocol/task-envelope.schema.json`。
+元数据至少包含主控侧关联任务 ID、父任务 ID、发起者、执行者、角色、允许动作、
+权限范围、验收条件和时间信息。A2A 运行时任务 ID 由接收端按标准生成，二者通过
+审计记录关联。结构草案见 `protocol/task-envelope.schema.json`。
 
 ## 7. 适配器接口
 
