@@ -40,6 +40,11 @@ for (const required of ['win10-install.bat', 'win10-verify.bat', 'win10-start.ba
   if (!existsSync(resolve(root, required))) fail(`missing Windows helper: ${required}`);
 }
 
+for (const rel of ['scripts/controller-heartbeat.mjs', 'dsh-session-bridge/client.js']) {
+  const content = readFileSync(resolve(root, rel), 'utf8');
+  if (content.includes('127.0.0.1:4311')) fail(`${rel} still points at obsolete task-room port 4311; Win10 relay uses 4310.`);
+}
+
 for (const doc of ['README.md', 'docs/HANDOFF.zh-CN.md']) {
   const content = readFileSync(resolve(root, doc), 'utf8');
   if (/\$env:CONTROLLER_TOKEN\s*=.*ToHexString/.test(content)) {
