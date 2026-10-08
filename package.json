@@ -7,8 +7,12 @@
   "scripts": {
     "build": "tsc --noEmit",
     "start": "tsx src/server.ts",
-    "test": "node --import tsx --test --test-isolation=none test/*.test.ts",
-    "smoke": "tsx scripts/smoke.ts"
+    "test": "node scripts/run-tests.mjs source",
+    "smoke": "tsx scripts/smoke.ts",
+    "test:compiled": "tsc --outDir .build --noEmit false && node scripts/run-tests.mjs compiled",
+    "verify:compat": "npm run test:compiled && node .build/scripts/smoke.js",
+    "verify:handoff": "node scripts/static-check.mjs && npm run verify:compat",
+    "verify:win10": "node scripts/windows-compat-check.mjs && npm run verify:handoff"
   },
   "engines": {
     "node": ">=22.19"

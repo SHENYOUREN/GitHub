@@ -90,10 +90,13 @@ export interface ModelProvider {
   models: ModelOption[];
 }
 
+export type TimelineKind = 'message' | 'reasoning' | 'tool' | 'result' | 'status' | 'question' | 'permission_request';
+
 export interface TimelineEvent {
   id: string;
   timestamp: string;
   type: string;
+  kind?: TimelineKind;
   actor: string;
   title: string;
   detail?: string;

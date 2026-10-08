@@ -6,80 +6,113 @@
     <title>多模型任务室</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
+  <body class="room-page">
     <header class="topbar">
       <div class="brand">
         <span class="brand-mark"><img src="/assets/icons/workflow.svg" alt="" /></span>
-        <div><h1>多模型任务室</h1><p>主控端口控制执行端</p></div>
+        <div>
+          <h1>多模型任务室</h1>
+          <p>ChatGPT 主控 · 执行端配置与协作监控</p>
+        </div>
       </div>
       <div class="top-actions">
-        <div class="service-state" id="service-state"><span class="state-dot"></span><span>连接中</span></div>
-        <button class="secondary-button" id="rework" type="button"><img src="/assets/icons/rotate-ccw.svg" alt="" />检查并返工</button>
+        <label class="switch-control" title="开启或关闭多模型任务室">
+          <input id="room-toggle" type="checkbox" /><span class="switch-track"></span><span class="switch-label">任务室</span>
+        </label>
+        <label class="switch-control" title="唤醒或休眠执行 Agent">
+          <input id="worker-toggle" type="checkbox" /><span class="switch-track"></span><span class="switch-label">唤醒执行</span>
+        </label>
+        <div class="service-state online" id="relay-state"><span class="state-dot"></span><span>中转站在线</span></div>
+        <div class="service-state" id="controller-service-state"><span class="state-dot"></span><span>ChatGPT 未连接</span></div>
+        <div class="service-state" id="worker-service-state"><span class="state-dot"></span><span>执行离线</span></div>
       </div>
     </header>
 
     <main class="task-room">
-      <section class="agent-deck" aria-label="代理配置">
+      <section class="agent-deck" aria-label="主控与执行端">
         <article class="agent-panel controller-panel">
-          <div class="agent-heading"><div><span class="role-dot controller"></span><strong>主控 Agent</strong></div><span class="agent-state">在线</span></div>
-          <p class="hierarchy">主控 · 上级：用户</p>
-          <p class="selection-line">当前选择：<strong id="controller-summary">Codex 主控</strong></p>
-          <div class="agent-fields">
-            <label>Provider<select id="controller-provider"><option>Codex</option></select></label>
-            <label>Model<select id="controller-model"><option>当前会话模型</option></select></label>
+          <div class="agent-heading">
+            <div><span class="role-dot controller"></span><strong>ChatGPT 主控</strong></div>
+            <span class="agent-state" id="controller-state">未连接</span>
           </div>
-          <fieldset class="effort-field"><legend>推理</legend><div class="effort-options static"><span class="active">由当前会话控制</span></div></fieldset>
+          <p class="hierarchy">主界面在 ChatGPT 客户端；这里仅显示连接状态，不替代 ChatGPT。</p>
+          <div class="readout-grid">
+            <div class="readout"><span>客户端</span><strong id="controller-client">ChatGPT</strong></div>
+            <div class="readout"><span>当前模型</span><strong id="controller-model">等待客户端上报</strong></div>
+            <div class="readout"><span>会话</span><strong id="controller-conversation">未注册</strong></div>
+            <div class="readout"><span>最后心跳</span><strong id="controller-heartbeat">—</strong></div>
+          </div>
         </article>
 
         <article class="agent-panel worker-panel">
-          <div class="agent-heading"><div><span class="role-dot worker"></span><strong>执行 Agent</strong></div><span class="agent-state" id="worker-state">待命</span></div>
-          <p class="hierarchy">执行 · 上级：主控 Agent</p>
-          <p class="selection-line">当前选择：<strong id="worker-summary">尚未选择</strong></p>
-          <div class="agent-fields">
-            <label>Provider<select id="provider" name="providerId"></select></label>
-            <label>Model<select id="model" name="modelId"></select></label>
+          <div class="agent-heading">
+            <div><span class="role-dot worker"></span><strong>执行 Agent 配置</strong></div>
+            <span class="agent-state" id="worker-state">休眠</span>
           </div>
-          <fieldset class="effort-field"><legend>推理</legend><div class="effort-options" id="effort-options"></div></fieldset>
+          <p class="hierarchy">参数可在任务室关闭、执行端休眠时提前配置。</p>
+          <div class="agent-fields">
+            <label>Provider<select id="provider"></select></label>
+            <label>Model<select id="model"></select></label>
+            <label>角色<select id="role"><option value="worker">执行</option><option value="reviewer">审查</option><option value="researcher">研究</option></select></label>
+            <label>权限<select id="permission"><option value="read-only">只读</option><option value="workspace-write">工作区写入</option></select></label>
+          </div>
+          <fieldset class="effort-field">
+            <legend>推理档位</legend>
+            <div class="effort-options" id="effort-options"></div>
+          </fieldset>
+          <p class="provider-note" id="provider-note"></p>
         </article>
       </section>
 
       <section class="workspace-strip">
         <img src="/assets/icons/folder-check.svg" alt="" />
-        <div><span>工作区校验</span><strong>D:\GPT工作室</strong></div>
-        <span class="workspace-status">本机工作区 · 等待执行授权</span>
+        <div><span>工作区</span><input id="workspace-root" class="workspace-input" value="D:\GPT工作室" aria-label="工作区路径" /></div>
+        <span class="workspace-status" id="workspace-status">任务室关闭 · 执行端休眠</span>
+        <button class="secondary-button agent-window-button" id="open-agent-window" type="button"><img src="/assets/icons/bot.svg" alt="" />打开执行 Agent 窗口</button>
       </section>
 
-      <section class="conversation-shell">
-        <div class="conversation-toolbar">
-          <div><p class="eyebrow">可审计对话</p><h2>主控端 ↔ 执行端</h2></div>
-          <button class="icon-button" id="refresh" type="button" title="刷新对话"><img src="/assets/icons/refresh-cw.svg" alt="刷新" /></button>
-        </div>
-        <div class="conversation" id="conversation" aria-live="polite"></div>
+      <section class="attention-banner" id="waiting-user-banner" hidden>
+        <img src="/assets/icons/messages-square.svg" alt="" />
+        <div><strong>执行 Agent 正在等待你的回复</strong><span id="waiting-user-text">打开执行 Agent 窗口即可直接回答。</span></div>
+        <button class="secondary-button" id="answer-waiting" type="button">去回答</button>
       </section>
 
-      <form class="composer" id="task-form">
-        <textarea id="objective" name="objective" rows="3" placeholder="由主控端向执行端下发任务。创建后先进入待授权队列，不会直接调用模型。" required></textarea>
-        <div class="composer-bottom">
-          <div class="compact-fields">
-            <label>角色<select id="role"><option value="worker">执行</option><option value="reviewer">审查</option><option value="researcher">研究</option></select></label>
-            <label>权限<select id="permission"><option value="read-only">只读</option><option value="workspace-write">工作区写入</option></select></label>
+      <section class="task-history-panel">
+        <div class="task-history-heading">
+          <div><p class="eyebrow">任务记录</p><h2>任务历史</h2></div>
+          <div class="toolbar-actions">
+            <button class="secondary-button" id="run-demo" type="button"><img src="/assets/icons/play.svg" alt="" />运行演示任务</button>
           </div>
-          <button class="primary-button" type="submit"><img src="/assets/icons/send.svg" alt="" />主控下发</button>
         </div>
-        <p class="provider-note" id="provider-note"></p>
-      </form>
+        <div class="demo-hint" id="demo-hint">演示模式不会调用 DeepSeek；用于提前验证思考、工具、提问、人工插话和结果流程。</div>
+        <div class="task-history" id="task-history"></div>
+      </section>
+
+      <section class="conversation-shell room-conversation">
+        <div class="conversation-toolbar">
+          <div><p class="eyebrow">协作总览</p><h2>ChatGPT ↔ DeepSeek</h2></div>
+          <div class="toolbar-actions">
+            <span class="connection-hint" id="stream-state">实时流连接中</span>
+            <button class="icon-button" id="refresh" type="button" title="刷新"><img src="/assets/icons/refresh-cw.svg" alt="刷新" /></button>
+          </div>
+        </div>
+        <div class="conversation" id="room-conversation" aria-live="polite"></div>
+        <div class="disabled-notice" id="room-disabled-notice">
+          <img src="/assets/icons/power.svg" alt="" />
+          <strong>多模型任务室未开启</strong>
+          <span>配置仍可修改；开启后才进入协作状态。</span>
+        </div>
+      </section>
     </main>
 
     <dialog id="detail-dialog">
-      <div class="dialog-heading"><div><p class="eyebrow">消息轨迹</p><h2 id="detail-title">执行详情</h2></div><button class="icon-button" type="button" id="close-detail" title="关闭"><img src="/assets/icons/x.svg" alt="关闭" /></button></div>
+      <div class="dialog-heading">
+        <div><p class="eyebrow">消息详情</p><h2 id="detail-title">记录</h2></div>
+        <button class="icon-button" type="button" id="close-detail" title="关闭"><img src="/assets/icons/x.svg" alt="关闭" /></button>
+      </div>
       <div id="detail-content"></div>
     </dialog>
-    <dialog id="confirmation-dialog">
-      <div class="dialog-heading"><img src="/assets/icons/shield-check.svg" alt="" /><h2>已加入主控队列</h2></div>
-      <p>执行端保持待命，需再次明确授权才可运行。</p>
-      <p class="dialog-state">尚未调用任何外部模型</p>
-      <form method="dialog" class="dialog-actions"><button class="secondary-button" value="close">关闭</button></form>
-    </dialog>
+
     <script type="module" src="/app.js"></script>
   </body>
 </html>

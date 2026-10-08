@@ -2,8 +2,23 @@ import type { ModelProvider } from './types.js';
 
 export const modelProviders: ModelProvider[] = [
   {
+    id: 'deepseek-harness',
+    name: 'DeepSeek Harness',
+    status: 'bridge-only',
+    models: [
+      {
+        id: 'dsh-current',
+        name: '使用 DSH 当前模型',
+        tiers: ['默认'],
+        precisionModes: ['默认'],
+        reasoningEfforts: ['off', 'low', 'medium', 'high'],
+        capabilities: ['文本', '执行轨迹', '工具调用', '推理流（若 DSH 提供）'],
+      },
+    ],
+  },
+  {
     id: 'local-proof',
-    name: '本地证明执行器',
+    name: '本地证明执行器（开发测试）',
     status: 'ready',
     models: [
       {
@@ -16,28 +31,7 @@ export const modelProviders: ModelProvider[] = [
       },
     ],
   },
-  {
-    id: 'deepseek-harness',
-    name: 'DeepSeek Harness',
-    status: 'bridge-only',
-    models: [],
-  },
-  {
-    id: 'openai',
-    name: 'OpenAI',
-    status: 'not-connected',
-    models: [],
-  },
-  {
-    id: 'anthropic',
-    name: 'Anthropic',
-    status: 'not-connected',
-    models: [],
-  },
-  {
-    id: 'google',
-    name: 'Google Gemini',
-    status: 'not-connected',
-    models: [],
-  },
+  { id: 'openai', name: 'OpenAI（预留）', status: 'not-connected', models: [] },
+  { id: 'anthropic', name: 'Anthropic（预留）', status: 'not-connected', models: [] },
+  { id: 'google', name: 'Google Gemini（预留）', status: 'not-connected', models: [] },
 ];

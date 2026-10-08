@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>执行 Agent 工作窗口</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="agent-page">
+    <header class="topbar agent-topbar">
+      <div class="brand">
+        <span class="brand-mark worker-mark"><img src="/assets/icons/bot.svg" alt="" /></span>
+        <div><h1>执行 Agent 工作窗口</h1><p>DeepSeek 过程流 · 工具操作 · 结果 · 用户直接沟通</p></div>
+      </div>
+      <div class="top-actions">
+        <div class="service-state" id="controller-service-state"><span class="state-dot"></span><span>ChatGPT 未连接</span></div>
+        <div class="service-state" id="worker-service-state"><span class="state-dot"></span><span>执行离线</span></div>
+        <button class="secondary-button" id="back-room" type="button"><img src="/assets/icons/workflow.svg" alt="" />任务室</button>
+      </div>
+    </header>
+
+    <main class="agent-workspace">
+      <section class="agent-runtime-bar">
+        <div class="runtime-block">
+          <span>执行端</span><strong id="runtime-provider">DeepSeek Harness</strong>
+        </div>
+        <div class="runtime-block">
+          <span>模型</span><strong id="runtime-model">等待配置</strong>
+        </div>
+        <div class="runtime-block">
+          <span>推理</span><strong id="runtime-effort">—</strong>
+        </div>
+        <div class="runtime-block runtime-grow">
+          <span>工作区</span><strong id="runtime-workspace">D:\GPT工作室</strong>
+        </div>
+        <div class="runtime-block runtime-task">
+          <span>任务</span><select id="runtime-task-select" aria-label="选择任务"><option value="">全部任务</option></select>
+        </div>
+        <div class="runtime-block">
+          <span>状态</span><strong id="runtime-state">休眠</strong>
+        </div>
+        <div class="runtime-controls" aria-label="任务控制">
+          <button class="icon-button task-control-button" id="pause-task" type="button" title="暂停任务" disabled><img src="/assets/icons/pause.svg" alt="暂停" /></button>
+          <button class="icon-button task-control-button" id="resume-task" type="button" title="继续任务" disabled><img src="/assets/icons/play.svg" alt="继续" /></button>
+          <button class="icon-button task-control-button danger" id="cancel-task" type="button" title="中止任务" disabled><img src="/assets/icons/square.svg" alt="中止" /></button>
+        </div>
+      </section>
+
+      <section class="attention-banner agent-attention" id="agent-waiting-banner" hidden>
+        <img src="/assets/icons/messages-square.svg" alt="" />
+        <div><strong>当前任务正在等待你的回复</strong><span id="agent-waiting-text">在下方直接回复即可继续。</span></div>
+      </section>
+
+      <section class="agent-stream-shell">
+        <div class="conversation-toolbar agent-stream-toolbar">
+          <div>
+            <p class="eyebrow">执行过程</p>
+            <h2>DeepSeek 工作流</h2>
+          </div>
+          <div class="toolbar-actions">
+            <span class="connection-hint" id="stream-state">实时流连接中</span>
+            <button class="icon-button" id="refresh" type="button" title="刷新"><img src="/assets/icons/refresh-cw.svg" alt="刷新" /></button>
+          </div>
+        </div>
+        <div class="agent-disclosure">
+          <img src="/assets/icons/bot.svg" alt="" />
+          <span>这里显示执行端实际返回的思考/推理内容、状态、工具调用和结果。执行端没有提供的隐藏内部思维不会被伪造。</span>
+        </div>
+        <div class="agent-filter" id="agent-filter">
+          <button class="filter-chip active" type="button" data-filter="all">全部</button>
+          <button class="filter-chip" type="button" data-filter="reasoning">思考</button>
+          <button class="filter-chip" type="button" data-filter="tool">工具</button>
+          <button class="filter-chip" type="button" data-filter="status">状态</button>
+          <button class="filter-chip" type="button" data-filter="result">结果</button>
+          <button class="filter-chip" type="button" data-filter="question">提问/权限</button>
+          <button class="filter-chip" type="button" data-filter="message">对话</button>
+        </div>
+        <div class="agent-event-stream" id="agent-event-stream" aria-live="polite"></div>
+        <div class="disabled-notice" id="worker-disabled-notice">
+          <img src="/assets/icons/power.svg" alt="" />
+          <strong>执行 Agent 处于休眠</strong>
+          <span>仍可查看历史记录；要直接沟通，请先在任务室开启并唤醒执行端。</span>
+        </div>
+      </section>
+
+      <form class="direct-composer" id="direct-form">
+        <div class="direct-heading">
+          <div><strong id="direct-heading-title">直接对执行 Agent 说</strong><span id="direct-heading-note">必要时人工插话；消息会进入共享时间线，ChatGPT 主控也能同步读取。</span></div>
+          <span class="direct-badge">用户直达</span>
+        </div>
+        <textarea id="direct-message" rows="3" placeholder="例如：先别检查整个项目，只看网页端。" required></textarea>
+        <div class="composer-bottom">
+          <p class="provider-note" id="direct-note">当前不会绕过中转站；真实执行端接入后由适配器读取这条消息。</p>
+          <button class="primary-button" id="direct-send" type="submit" disabled><img src="/assets/icons/send.svg" alt="" />发送给执行 Agent</button>
+        </div>
+      </form>
+    </main>
+
+    <dialog id="event-dialog">
+      <div class="dialog-heading"><div><p class="eyebrow">执行记录</p><h2 id="event-title">详情</h2></div><button class="icon-button" type="button" id="close-event" title="关闭"><img src="/assets/icons/x.svg" alt="关闭" /></button></div>
+      <div id="event-detail"></div>
+    </dialog>
+
+    <script type="module" src="/agent.js"></script>
+  </body>
+</html>

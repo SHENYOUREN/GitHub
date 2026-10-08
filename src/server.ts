@@ -2,6 +2,11 @@ import { resolve } from 'node:path';
 import { createApp } from './app.js';
 import { JsonLineAuditSink } from './audit.js';
 import { CompositeAuditSink, TimelineStore } from './timeline.js';
+import { ControlStateStore } from './control-state.js';
+import { ControllerSessionStore } from './controller-session.js';
+import { ExecutionConfigStore } from './execution-config.js';
+import { TaskStore } from './task-store.js';
+import { WorkerSessionStore } from './worker-session.js';
 import { ProofWorkerAdapter } from './workers/proof-worker.js';
 
 const host = process.env.HOST ?? '127.0.0.1';
@@ -19,7 +24,13 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 }
 
 const baseUrl = `http://${host}:${port}`;
-const timeline = new TimelineStore();
+const timeline = new TimelineStore(2000, resolve('data', 'timeline.json'));
+const controlState = new ControlStateStore();
+const controllerSession = new ControllerSessionStore();
+const executionConfig = new ExecutionConfigStore(resolve('data', 'execution-config.json'));
+const tasks = new TaskStore(resolve('data', 'tasks.json'));
+const interruptedTasks = tasks.failInterruptedOnStartup();
+const workerSession = new WorkerSessionStore();
 timeline.add({
   type: 'system.ready',
   actor: 'orchestrator',
@@ -32,6 +43,17 @@ timeline.add({
     toolSummary: '本机服务已监听，外部模型连接保持关闭。',
   },
 });
+for (const task of interruptedTasks) {
+  timeline.add({
+    type: 'task.recovery.interrupted',
+    kind: 'result',
+    actor: 'orchestrator',
+    title: '任务因中转站重启而中断',
+    detail: task.lastSummary ?? '任务执行上下文未恢复。',
+    state: 'error',
+    metadata: { taskId: task.id, channel: 'system', visibility: 'both' },
+  });
+}
 const app = createApp({
   baseUrl,
   controllerToken,
@@ -41,6 +63,11 @@ const app = createApp({
     timeline,
   ]),
   timeline,
+  controlState,
+  controllerSession,
+  executionConfig,
+  tasks,
+  workerSession,
 });
 
 app.listen(port, host, (error) => {
