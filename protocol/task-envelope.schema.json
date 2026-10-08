@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:github:shenyouren:github:task-envelope:0.1",
+  "title": "Hierarchical A2A Task Metadata",
+  "description": "Application metadata layered on an A2A task. It adds authority and acceptance rules without replacing standard A2A fields.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocolVersion",
+    "taskId",
+    "issuedBy",
+    "assignedTo",
+    "objective",
+    "authority",
+    "permissions",
+    "acceptanceCriteria",
+    "createdAt"
+  ],
+  "properties": {
+    "protocolVersion": {
+      "const": "0.1"
+    },
+    "taskId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "parentTaskId": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "issuedBy": {
+      "$ref": "#/$defs/principal"
+    },
+    "assignedTo": {
+      "$ref": "#/$defs/principal"
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20000
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["controllerId", "workerRole", "allowedWorkerMessages"],
+      "properties": {
+        "controllerId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workerRole": {
+          "enum": ["worker", "reviewer"]
+        },
+        "allowedWorkerMessages": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": ["status", "result", "question", "permission_request", "failure"]
+          }
+        }
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workspaceMode", "network", "destructiveActions"],
+      "properties": {
+        "workspaceMode": {
+          "enum": ["read-only", "workspace-write"]
+        },
+        "allowedRoots": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "network": {
+          "enum": ["none", "allowlist", "unrestricted"]
+        },
+        "networkAllowlist": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "destructiveActions": {
+          "const": "require-human-approval"
+        }
+      }
+    },
+    "acceptanceCriteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expiresAt": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 256
+    }
+  },
+  "$defs": {
+    "principal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "role"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "role": {
+          "enum": ["human-owner", "controller", "worker", "reviewer"]
+        },
+        "client": {
+          "type": "string",
+          "maxLength": 128
+        }
+      }
+    }
+  }
+}
