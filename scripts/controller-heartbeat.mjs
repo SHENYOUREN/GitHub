@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const baseUrl = process.env.TASK_ROOM_URL ?? 'http://127.0.0.1:4311';
+const baseUrl = process.env.TASK_ROOM_URL ?? 'http://127.0.0.1:4310';
 const token = readFileSync(resolve('data', 'controller-token.txt'), 'utf8').trim();
 const conversationId = process.env.CODEX_CONVERSATION_ID ?? 'local-codex-session';
 const intervalMs = 20_000;
