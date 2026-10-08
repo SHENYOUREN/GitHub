@@ -1,7 +1,7 @@
 window.__ModuleLoader__.load({
   id: '@local/taskroom-session-bridge',
   factory() {
-    const STATUS_URL = 'http://127.0.0.1:4311/ui-api/worker-session';
+    const STATUS_URL = 'http://127.0.0.1:4310/ui-api/worker-session';
     const POLL_INTERVAL_MS = 2_000;
 
     return {
