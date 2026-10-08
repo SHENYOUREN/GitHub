@@ -19,6 +19,8 @@ import { modelProviders } from './catalog.js';
 import type { ControlStateStore } from './control-state.js';
 import type { ControllerSessionStore, ControllerSessionUpdate } from './controller-session.js';
 import type { ExecutionConfigStore, ExecutionRole, WorkspacePermission } from './execution-config.js';
+import type { DshSettingsReader } from './dsh-settings.js';
+import type { DshHandshakeService } from './dsh-handshake.js';
 import type { TimelineStore } from './timeline.js';
 import { DemoRunner } from './demo-runner.js';
 import { TaskStore, type TaskStatus } from './task-store.js';
@@ -34,6 +36,8 @@ export interface AppOptions {
   controlState: ControlStateStore;
   controllerSession: ControllerSessionStore;
   executionConfig: ExecutionConfigStore;
+  dshSettings: DshSettingsReader;
+  dshHandshake: DshHandshakeService;
   tasks?: TaskStore;
   workerSession: WorkerSessionStore;
 }
@@ -136,6 +140,7 @@ export function createApp(options: AppOptions) {
   };
 
   const taskStore = options.tasks ?? new TaskStore();
+  const effectiveExecutionConfig = () => options.executionConfig.get();
   const demoRunner = options.timeline ? new DemoRunner(options.timeline, taskStore, options.executionConfig) : null;
   const dispatchReady = () => {
     const control = options.controlState.get();
@@ -151,6 +156,14 @@ export function createApp(options: AppOptions) {
   const app = express();
 
   app.disable('x-powered-by');
+  app.use('/ui-api', (request, response, next) => {
+    const origin = request.header('origin');
+    if (origin === 'http://127.0.0.1:3080' || origin === 'http://localhost:3080') {
+      response.setHeader('Access-Control-Allow-Origin', origin);
+      response.setHeader('Vary', 'Origin');
+    }
+    next();
+  });
   app.use('/assets/icons', express.static(resolve('node_modules', 'lucide-static', 'icons')));
   app.use(express.static(resolve('public')));
   app.get('/agent', (_request, response) => response.sendFile(resolve('public', 'agent.html')));
@@ -188,7 +201,43 @@ export function createApp(options: AppOptions) {
     response.json({ providers: modelProviders });
   });
   app.get('/ui-api/execution-config', (_request, response) => {
-    response.json(options.executionConfig.get());
+    response.json(effectiveExecutionConfig());
+  });
+  app.get('/ui-api/dsh-settings', async (_request, response) => {
+    response.json(await options.dshSettings.status());
+  });
+  app.post('/ui-api/sync-dsh-settings', (_request, response) => {
+    const dsh = options.dshSettings.get();
+    if (!dsh.available || !dsh.model) {
+      response.status(503).json({ error: 'dsh_settings_unavailable', dsh });
+      return;
+    }
+    const current = options.executionConfig.get();
+    const syncedAt = new Date().toISOString();
+    const next = options.executionConfig.update({
+      providerId: 'deepseek-harness',
+      modelId: 'dsh-current',
+      reasoningEffort: dsh.reasoningEffort ?? current.reasoningEffort,
+      dshSynced: {
+        provider: dsh.provider,
+        model: dsh.model,
+        modelName: dsh.model,
+        reasoningEffort: dsh.reasoningEffort,
+        source: dsh.source,
+        sessionId: dsh.sessionId,
+        syncedAt,
+      },
+    });
+    options.timeline?.add({
+      type: 'worker.settings.synced', kind: 'status', actor: 'orchestrator', title: '已同步执行端设置',
+      detail: `${dsh.provider ?? '默认服务商'} / ${dsh.model} · 推理 ${dsh.reasoningEffort ?? '默认'}`,
+      state: 'success', metadata: { channel: 'system', visibility: 'both', syncedAt, readOnlySync: true },
+    });
+    response.json({ config: next, dsh, changedDsh: false });
+  });
+  app.post('/ui-api/dsh-window', (_request, response) => {
+    const opened = options.dshHandshake.openWindow();
+    response.status(opened ? 202 : 503).json({ opened });
   });
   app.patch('/ui-api/execution-config', express.json({ limit: '8kb' }), (request, response) => {
     const current = options.executionConfig.get();
@@ -218,18 +267,64 @@ export function createApp(options: AppOptions) {
       ? request.body.permission as WorkspacePermission
       : current.permission;
     const workspaceRoot = text(request.body?.workspaceRoot, 600) || current.workspaceRoot;
-    const next = options.executionConfig.update({ providerId, modelId, reasoningEffort, role, permission, workspaceRoot });
+    const next = options.executionConfig.update({
+      providerId,
+      modelId,
+      reasoningEffort,
+      role,
+      permission,
+      workspaceRoot,
+    });
     response.json(next);
   });
   app.get('/ui-api/timeline', (request, response) => {
     const after = typeof request.query.after === 'string' ? request.query.after : null;
     response.json({ events: options.timeline?.listAfter(after) ?? [] });
   });
+  app.delete('/ui-api/timeline/:eventId', (request, response) => {
+    if (!options.timeline?.remove(request.params.eventId)) {
+      response.status(404).json({ error: 'timeline_event_not_found' });
+      return;
+    }
+    response.json({ deleted: 1 });
+  });
+  app.delete('/ui-api/timeline', (_request, response) => {
+    response.json({ deleted: options.timeline?.clear() ?? 0 });
+  });
   app.get('/ui-api/controller-session', (_request, response) => {
     response.json(options.controllerSession.get());
   });
   app.get('/ui-api/worker-session', (_request, response) => {
+    if (options.controlState.get().workerAwake && options.dshHandshake.isLinked()) options.workerSession.heartbeat();
     response.json(options.workerSession.get());
+  });
+  app.post('/ui-api/worker-handshake', async (_request, response) => {
+    const control = options.controlState.get();
+    if (!control.roomEnabled || !control.workerAwake) {
+      response.status(409).json({ error: 'worker_not_awake' });
+      return;
+    }
+    options.timeline?.add({
+      type: 'worker.handshake.started', kind: 'status', actor: 'orchestrator', title: '正在创建 DSH 握手会话',
+      detail: '只发送连接验证语，不包含工作任务。', state: 'waiting', metadata: { channel: 'system', visibility: 'both' },
+    });
+    const config = effectiveExecutionConfig();
+    const result = await options.dshHandshake.connect({ workspaceRoot: config.workspaceRoot });
+    if (!result.connected) {
+      options.timeline?.add({
+        type: 'worker.handshake.failed', kind: 'status', actor: 'orchestrator', title: 'DSH 握手未完成',
+        detail: result.error ?? '未收到“我已链接”。', state: 'error', metadata: { channel: 'system', visibility: 'both' },
+      });
+      response.status(502).json(result);
+      return;
+    }
+    const settings = options.dshSettings.get();
+    const session = options.workerSession.update({ clientName: 'DeepSeek Harness', model: settings.model, sessionId: result.sessionId, state: 'idle' });
+    options.timeline?.add({
+      type: 'worker.handshake.completed', kind: 'message', actor: 'worker', title: '执行 Agent → 中转站',
+      detail: result.reply, state: 'success', metadata: { channel: 'worker', visibility: 'both', sessionId: result.sessionId, handshake: true },
+    });
+    response.json({ ...result, session });
   });
   app.get('/ui-api/events', (request, response) => {
     response.status(200);
@@ -320,6 +415,8 @@ export function createApp(options: AppOptions) {
     try {
       const next = options.controlState.update(patch);
       if (previous.workerAwake && !next.workerAwake) {
+        options.dshHandshake.reset();
+        options.workerSession.disconnect();
         for (const task of taskStore.list()) {
           if (task.status !== 'running') continue;
           if (task.source === 'demo' && demoRunner) {
@@ -350,9 +447,9 @@ export function createApp(options: AppOptions) {
           type: next.workerAwake ? 'worker.awake' : 'worker.asleep',
           kind: 'status',
           actor: 'worker',
-          title: next.workerAwake ? '执行 Agent 已唤醒' : '执行 Agent 已休眠',
-          detail: next.workerAwake ? '执行端已上线，等待 ChatGPT 主控派发。' : '执行端不会接收新任务。',
-          state: next.workerAwake ? 'success' : 'info',
+          title: next.workerAwake ? '执行 Agent 开始唤醒' : '执行 Agent 已休眠',
+          detail: next.workerAwake ? '正在创建新的 DSH 握手会话；收到“我已链接”后才会标记在线。' : '执行端不会接收新任务。',
+          state: next.workerAwake ? 'waiting' : 'info',
           metadata: { channel: 'worker', visibility: 'both' },
         });
       }

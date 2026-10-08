@@ -56,6 +56,21 @@ export class TimelineStore implements AuditSink {
     return index < 0 ? this.list() : this.events.slice(index + 1);
   }
 
+  remove(eventId: string): boolean {
+    const index = this.events.findIndex((event) => event.id === eventId);
+    if (index < 0) return false;
+    this.events.splice(index, 1);
+    this.persist();
+    return true;
+  }
+
+  clear(): number {
+    const removed = this.events.length;
+    this.events.splice(0, this.events.length);
+    this.persist();
+    return removed;
+  }
+
   subscribe(listener: TimelineListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);

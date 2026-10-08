@@ -7,6 +7,7 @@
   "scripts": {
     "build": "tsc --noEmit",
     "start": "tsx src/server.ts",
+    "heartbeat:controller": "node scripts/controller-heartbeat.mjs",
     "test": "node scripts/run-tests.mjs source",
     "smoke": "tsx scripts/smoke.ts",
     "test:compiled": "tsc --outDir .build --noEmit false && node scripts/run-tests.mjs compiled",

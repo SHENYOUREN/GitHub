@@ -5,6 +5,8 @@ import { MemoryAuditSink } from '../src/audit.js';
 import { ControlStateStore } from '../src/control-state.js';
 import { ControllerSessionStore } from '../src/controller-session.js';
 import { ExecutionConfigStore } from '../src/execution-config.js';
+import { DshSettingsReader } from '../src/dsh-settings.js';
+import { DshHandshakeService } from '../src/dsh-handshake.js';
 import { TimelineStore } from '../src/timeline.js';
 import { WorkerSessionStore } from '../src/worker-session.js';
 import { HIERARCHY_METADATA_KEY, type TaskEnvelope } from '../src/types.js';
@@ -17,6 +19,8 @@ const controlState = new ControlStateStore();
 const controllerSession = new ControllerSessionStore();
 const executionConfig = new ExecutionConfigStore();
 const workerSession = new WorkerSessionStore();
+const dshSettings = new DshSettingsReader();
+const dshHandshake = new DshHandshakeService();
 const app = createApp({
   baseUrl: 'http://127.0.0.1:0',
   controllerToken: token,
@@ -26,6 +30,8 @@ const app = createApp({
   controlState,
   controllerSession,
   executionConfig,
+  dshSettings,
+  dshHandshake,
   workerSession,
 });
 const server = app.listen(0, '127.0.0.1');

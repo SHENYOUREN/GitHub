@@ -91,8 +91,8 @@ if (isWindows) {
     } catch {
       warn('Could not parse data/execution-config.json while checking workspace path.');
     }
-  } else if (!existsSync('D:\\GPT工作室')) {
-    warn('Default workspace D:\\GPT工作室 does not exist on this machine yet; choose the real workspace in the web UI before execution.');
+  } else if (!existsSync('D:\\GPT工作室\\执行端文件夹\\deepseek执行端')) {
+    warn('Default DeepSeek workspace D:\\GPT工作室\\执行端文件夹\\deepseek执行端 does not exist on this machine yet; choose the real workspace in the web UI before execution.');
   }
 
   const port = Number.parseInt(process.env.PORT ?? '4310', 10);

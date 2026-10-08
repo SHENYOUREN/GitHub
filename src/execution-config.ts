@@ -1,8 +1,19 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { DEFAULT_DEEPSEEK_WORKSPACE, normalizeExecutionWorkspace } from './workspace.js';
 
 export type ExecutionRole = 'worker' | 'reviewer' | 'researcher';
 export type WorkspacePermission = 'read-only' | 'workspace-write';
+
+export interface DshSyncedSettings {
+  provider: string | null;
+  model: string | null;
+  modelName: string | null;
+  reasoningEffort: string | null;
+  source: 'session-last-used' | 'profile-default' | 'fallback';
+  sessionId: string | null;
+  syncedAt: string;
+}
 
 export interface ExecutionConfig {
   providerId: string;
@@ -11,6 +22,7 @@ export interface ExecutionConfig {
   role: ExecutionRole;
   permission: WorkspacePermission;
   workspaceRoot: string;
+  dshSynced: DshSyncedSettings | null;
   updatedAt: string | null;
 }
 
@@ -20,7 +32,8 @@ const defaultConfig: ExecutionConfig = {
   reasoningEffort: 'high',
   role: 'worker',
   permission: 'read-only',
-  workspaceRoot: 'D:\\GPT工作室',
+  workspaceRoot: DEFAULT_DEEPSEEK_WORKSPACE,
+  dshSynced: null,
   updatedAt: null,
 };
 
@@ -42,7 +55,20 @@ export class ExecutionConfigStore {
         reasoningEffort: parsed.reasoningEffort === null || typeof parsed.reasoningEffort === 'string' ? parsed.reasoningEffort : defaultConfig.reasoningEffort,
         role: ['worker', 'reviewer', 'researcher'].includes(parsed.role ?? '') ? parsed.role as ExecutionRole : defaultConfig.role,
         permission: ['read-only', 'workspace-write'].includes(parsed.permission ?? '') ? parsed.permission as WorkspacePermission : defaultConfig.permission,
-        workspaceRoot: typeof parsed.workspaceRoot === 'string' && parsed.workspaceRoot.trim() ? parsed.workspaceRoot : defaultConfig.workspaceRoot,
+        workspaceRoot: normalizeExecutionWorkspace(parsed.workspaceRoot),
+        dshSynced: parsed.dshSynced && typeof parsed.dshSynced === 'object'
+          ? {
+              provider: typeof parsed.dshSynced.provider === 'string' ? parsed.dshSynced.provider : null,
+              model: typeof parsed.dshSynced.model === 'string' ? parsed.dshSynced.model : null,
+              modelName: typeof parsed.dshSynced.modelName === 'string' ? parsed.dshSynced.modelName : null,
+              reasoningEffort: typeof parsed.dshSynced.reasoningEffort === 'string' ? parsed.dshSynced.reasoningEffort : null,
+              source: ['session-last-used', 'profile-default', 'fallback'].includes(parsed.dshSynced.source ?? '')
+                ? parsed.dshSynced.source as DshSyncedSettings['source']
+                : 'fallback',
+              sessionId: typeof parsed.dshSynced.sessionId === 'string' ? parsed.dshSynced.sessionId : null,
+              syncedAt: typeof parsed.dshSynced.syncedAt === 'string' ? parsed.dshSynced.syncedAt : new Date(0).toISOString(),
+            }
+          : null,
         updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : null,
       };
     } catch {

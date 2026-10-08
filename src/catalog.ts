@@ -8,10 +8,18 @@ export const modelProviders: ModelProvider[] = [
     models: [
       {
         id: 'dsh-current',
-        name: '使用 DSH 当前模型',
+        name: '跟随 DSH 当前选择',
         tiers: ['默认'],
         precisionModes: ['默认'],
         reasoningEfforts: ['off', 'low', 'medium', 'high'],
+        capabilities: ['文本', '执行轨迹', '工具调用', '推理流（若 DSH 提供）'],
+      },
+      {
+        id: 'deepseek-flash',
+        name: 'DeepSeek Flash（DSH 默认）',
+        tiers: ['官方'],
+        precisionModes: ['默认'],
+        reasoningEfforts: ['off', 'low', 'high', 'max'],
         capabilities: ['文本', '执行轨迹', '工具调用', '推理流（若 DSH 提供）'],
       },
     ],

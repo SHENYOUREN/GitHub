@@ -60,14 +60,23 @@
             <legend>推理档位</legend>
             <div class="effort-options" id="effort-options"></div>
           </fieldset>
+          <div class="dsh-sync-summary" id="dsh-sync-summary">
+            <span>中转站同步：</span>
+            <strong id="dsh-sync-provider">未同步</strong>
+            <strong id="dsh-sync-model">—</strong>
+            <strong id="dsh-sync-effort">—</strong>
+            <time id="dsh-sync-time">—</time>
+          </div>
           <p class="provider-note" id="provider-note"></p>
         </article>
       </section>
 
       <section class="workspace-strip">
         <img src="/assets/icons/folder-check.svg" alt="" />
-        <div><span>工作区</span><input id="workspace-root" class="workspace-input" value="D:\GPT工作室" aria-label="工作区路径" /></div>
+        <div><span>执行端工作区</span><input id="workspace-root" class="workspace-input" value="D:\GPT工作室\执行端文件夹\deepseek执行端" aria-label="执行端工作区路径" /></div>
         <span class="workspace-status" id="workspace-status">任务室关闭 · 执行端休眠</span>
+        <button class="secondary-button agent-window-button" id="sync-dsh-settings" type="button"><img src="/assets/icons/refresh-cw.svg" alt="" />同步执行端设置</button>
+        <button class="secondary-button agent-window-button" id="open-dsh-settings" type="button"><img src="/assets/icons/settings.svg" alt="" />打开 DSH 设置</button>
         <button class="secondary-button agent-window-button" id="open-agent-window" type="button"><img src="/assets/icons/bot.svg" alt="" />打开执行 Agent 窗口</button>
       </section>
 
@@ -92,7 +101,15 @@
         <div class="conversation-toolbar">
           <div><p class="eyebrow">协作总览</p><h2>ChatGPT ↔ DeepSeek</h2></div>
           <div class="toolbar-actions">
+            <div class="overview-filters" id="overview-filters" aria-label="协作记录分类">
+              <button class="filter-chip active" data-room-filter="all" type="button">全部</button>
+              <button class="filter-chip" data-room-filter="controller" type="button">主控</button>
+              <button class="filter-chip" data-room-filter="worker" type="button">执行</button>
+              <button class="filter-chip" data-room-filter="system" type="button">系统</button>
+            </div>
             <span class="connection-hint" id="stream-state">实时流连接中</span>
+            <button class="secondary-button history-toggle" id="toggle-history" type="button"><img src="/assets/icons/chevron-down.svg" alt="" /><span>展开历史</span></button>
+            <button class="icon-button danger-button" id="clear-timeline" type="button" title="清屏"><img src="/assets/icons/trash-2.svg" alt="清屏" /></button>
             <button class="icon-button" id="refresh" type="button" title="刷新"><img src="/assets/icons/refresh-cw.svg" alt="刷新" /></button>
           </div>
         </div>

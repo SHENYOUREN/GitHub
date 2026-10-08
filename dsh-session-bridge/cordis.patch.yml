@@ -1,0 +1,3 @@
+- insert:
+    - id: taskroom-session-bridge
+      name: '@local/taskroom-session-bridge'

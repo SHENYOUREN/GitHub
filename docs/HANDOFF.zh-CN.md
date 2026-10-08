@@ -362,3 +362,11 @@ npm run verify:handoff
 - 一次性授权票据与最终权限模型。
 
 不要把这些未接线项误判成当前网页/中转站故障。
+
+## 2026-10-08：DeepSeek 执行目录与只读设置同步
+
+- 新建 DSH 握手会话时，中转站会以 `D:\GPT工作室\执行端文件夹\deepseek执行端` 作为实际进程工作目录（cwd），并在目录不存在时创建它。
+- 旧默认值 `D:\GPT工作室` 与 `D:\AI工作区` 会在读取旧中转站配置时迁移到新的执行端专用目录；用户之后手动填写的其他目录不会被强制覆盖。
+- 任务室新增“同步执行端设置”按钮。该操作只读读取 DSH 当前的 Provider、模型和推理档位，并把快照写入中转站自己的 `execution-config`。
+- 同步接口是 `POST /ui-api/sync-dsh-settings`，响应中的 `changedDsh` 固定为 `false`；实现不得写入 DSH profile/session 文件。
+- 中转站保存的同步快照位于 `executionConfig.dshSynced`，用于 UI 展示和后续客户端接手。DSH 仍然是其自身设置的唯一真源。

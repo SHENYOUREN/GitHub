@@ -5,6 +5,8 @@ import { CompositeAuditSink, TimelineStore } from './timeline.js';
 import { ControlStateStore } from './control-state.js';
 import { ControllerSessionStore } from './controller-session.js';
 import { ExecutionConfigStore } from './execution-config.js';
+import { DshSettingsReader } from './dsh-settings.js';
+import { DshHandshakeService } from './dsh-handshake.js';
 import { TaskStore } from './task-store.js';
 import { WorkerSessionStore } from './worker-session.js';
 import { ProofWorkerAdapter } from './workers/proof-worker.js';
@@ -28,6 +30,8 @@ const timeline = new TimelineStore(2000, resolve('data', 'timeline.json'));
 const controlState = new ControlStateStore();
 const controllerSession = new ControllerSessionStore();
 const executionConfig = new ExecutionConfigStore(resolve('data', 'execution-config.json'));
+const dshSettings = new DshSettingsReader();
+const dshHandshake = new DshHandshakeService();
 const tasks = new TaskStore(resolve('data', 'tasks.json'));
 const interruptedTasks = tasks.failInterruptedOnStartup();
 const workerSession = new WorkerSessionStore();
@@ -66,6 +70,8 @@ const app = createApp({
   controlState,
   controllerSession,
   executionConfig,
+  dshSettings,
+  dshHandshake,
   tasks,
   workerSession,
 });
